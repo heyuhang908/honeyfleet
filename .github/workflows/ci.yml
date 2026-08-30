@@ -1,0 +1,56 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    name: shellcheck (all .sh, tests/ excluded)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run shellcheck
+        run: |
+          find . -type f -name '*.sh' \
+            -not -path './tests/*' \
+            -not -path './.git/*' \
+            -print0 | xargs -0 -r shellcheck
+
+  bash-syntax:
+    name: bash -n (all .sh, tests/ excluded)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse-check every shell script
+        run: |
+          status=0
+          while IFS= read -r -d '' f; do
+            echo "bash -n $f"
+            bash -n "$f" || status=1
+          done < <(find . -type f -name '*.sh' \
+                     -not -path './tests/*' \
+                     -not -path './.git/*' \
+                     -print0)
+          exit "$status"
+
+  python-syntax:
+    name: py_compile (all .py, tests/ excluded)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Byte-compile-check every python file
+        run: |
+          status=0
+          while IFS= read -r -d '' f; do
+            echo "py_compile $f"
+            python3 -m py_compile "$f" || status=1
+          done < <(find . -type f -name '*.py' \
+                     -not -path './tests/*' \
+                     -not -path './.git/*' \
+                     -not -path '*/__pycache__/*' \
+                     -print0)
+          exit "$status"

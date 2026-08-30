@@ -1,0 +1,60 @@
+# honeyfleet configuration — single source of truth
+# Copy to /etc/honeyfleet/honeyfleet.conf and edit. Every module reads ONLY
+# its own keys via hf_conf <KEY> [default]. Never hardcode parameters in code.
+
+# ── Role ─────────────────────────────────────────────────────
+HF_ROLE="agent"                # central (receives fleet reports) | agent (pushes status)
+
+# ── SSH hardening + honeypot ─────────────────────────────────
+HF_SSH_REAL_PORT="random"      # random = installer picks 10000-65535 at install time
+HF_SSH_HONEYPOT=true           # deploy a fake SSH on port 22 that logs and bans
+HF_SSH_MAXAUTHTRIES=3
+HF_SSH_MANAGEMENT_SOURCES="192.0.2.10"   # space-separated operator sources; ALWAYS include yours
+
+# ── fail2ban enforcement funnel ──────────────────────────────
+HF_F2B_FINDTIME_SSH=600
+HF_F2B_MAXRETRY_SSH=5
+HF_F2B_BANTIME_SSH=10m
+HF_F2B_INCREMENT=true
+HF_F2B_INCREMENT_MAXTIME=3650d
+HF_HP_FINDTIME=600
+HF_HP_MAXRETRY=3
+HF_HP_BANTIME=30d
+HF_RECIDIVE_FINDTIME=30d
+HF_RECIDIVE_BANTIME=3650d
+
+# ── firewall baseline ────────────────────────────────────────
+HF_FW_SERVICES="443/tcp"                 # ports your services actually listen on
+HF_FW_SOURCE_WHITELIST_443=""            # empty = reachable from anywhere (see threat-model)
+HF_FW_BLOCKED_SOURCES=""                 # space-separated malicious source IPs
+HF_FW_MINING_PORT_BLOCK=true             # drop outbound stratum/mining ports
+
+# ── file integrity ───────────────────────────────────────────
+HF_FI_TARGETS="/etc/ssh/sshd_config /etc/fail2ban /etc/systemd/system"
+
+# ── waterline alerts ─────────────────────────────────────────
+HF_WATERLINE_DISK=80                     # percent used
+HF_WATERLINE_MEM=20                      # percent available (alert below)
+HF_WATERLINE_SWAP=50                     # percent used
+
+# ── notifier (pluggable) ─────────────────────────────────────
+HF_NOTIFIER=telegram                     # telegram | wecom | dingtalk | smtp
+HF_TG_BOT_TOKEN=""
+HF_TG_CHAT_ID=""
+HF_WECOM_WEBHOOK=""
+HF_DINGTALK_WEBHOOK=""
+HF_SMTP_TO=""
+HF_SMTP_RELAY=""
+
+# ── federation (agent role pushes status to central) ─────────
+HF_CENTRAL_HOST=""                       # central node host (agent role only)
+HF_CENTRAL_PORT=22
+HF_CENTRAL_USER="honeyfleet"
+HF_PUSH_INTERVAL=60                      # seconds
+
+# ── optional keys (safe to omit; defaults shown) ─────────────
+# HF_SSH_SOURCE_RESTRICT=false      # true = whitelist SSH sources (60s watchdog armed)
+# HF_FW_MINING_PORTS="3333,4444,5555,7777,8048,14444"
+# HF_WATERLINE_COOLDOWN_S=3600
+# HF_DINGTALK_SECRET=""             # dingtalk signing secret (if signing enabled)
+# HF_FLEET_SUMMARY_DEDUPE=1         # 0 = notify on every fleet push (no dedupe)
