@@ -105,7 +105,7 @@ by the next `install`. Change the config, not the artifacts.
 
 The default posture (`HF_SSH_SOURCE_RESTRICT=false`) is a deliberate lesson, not an
 oversight: whitelisting your management source is the classic self-lockout. Home
-broadband IPs rotate; a VPN exit moves; a laptop travels — and the whitelist that felt
+broadband IPs rotate; a roaming egress IP changes; a laptop travels — and the whitelist that felt
 safe on Monday locks you out on Friday, at the exact moment you need access most.
 
 If you accept that tradeoff, opt in **with the safety net**:

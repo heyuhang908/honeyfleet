@@ -113,7 +113,7 @@ agent 角色需额外完成推送密钥授权（见 5.8）。
 | HF_WATERLINE_DISK | 80 | 磁盘使用率告警阈值（百分比，达到即告警） |
 | HF_WATERLINE_MEM | 20 | 可用内存占比告警阈值（百分比，低于即告警） |
 | HF_WATERLINE_SWAP | 50 | swap 使用率告警阈值（百分比，高于即告警） |
-| HF_NOTIFIER | telegram | 告警通道：telegram / wecom / dingtalk / smtp |
+| HF_NOTIFIER | wecom | 告警通道：wecom / telegram / dingtalk / smtp（默认 wecom） |
 | HF_TG_BOT_TOKEN | "" | Telegram 机器人令牌 |
 | HF_TG_CHAT_ID | "" | Telegram 会话 ID |
 | HF_WECOM_WEBHOOK | "" | 企业微信群机器人 Webhook 地址 |

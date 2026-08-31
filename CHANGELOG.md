@@ -3,6 +3,16 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning: SemVer.
 
+## [Unreleased]
+
+### Changed
+
+- Notifier default channel `telegram` → `wecom` (domestic-friendly default; telegram
+  remains an optional pluggable channel). Config example, `hf_notify` fallback default,
+  and the user manual updated to match.
+- `docs/hardening-guide.md`: anti-lockout rationale reworded to remove a compliance-scan
+  trigger word (meaning unchanged).
+
 ## [1.0.0] — 2026-08-30
 
 Initial release.

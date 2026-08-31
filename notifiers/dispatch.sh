@@ -44,7 +44,7 @@ hf_notify() {
     # hf_notify TITLE [BODY] — route to the configured channel; returns the
     # channel's exit code (0 = sent or unconfigured; non-zero = send failure).
     local title=${1:-honeyfleet alert} body=${2:-} ch dir
-    ch=$(hf_conf NOTIFIER telegram)
+    ch=$(hf_conf NOTIFIER wecom)
     ch=$(printf '%s' "$ch" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')
     if [ -z "$ch" ]; then
         hf_warn "notify skipped: HF_NOTIFIER is empty (telegram|wecom|dingtalk|smtp)"

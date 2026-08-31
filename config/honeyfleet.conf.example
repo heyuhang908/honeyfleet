@@ -38,7 +38,7 @@ HF_WATERLINE_MEM=20                      # percent available (alert below)
 HF_WATERLINE_SWAP=50                     # percent used
 
 # ── notifier (pluggable) ─────────────────────────────────────
-HF_NOTIFIER=telegram                     # telegram | wecom | dingtalk | smtp
+HF_NOTIFIER=wecom                        # wecom | telegram | dingtalk | smtp (wecom default; telegram optional)
 HF_TG_BOT_TOKEN=""
 HF_TG_CHAT_ID=""
 HF_WECOM_WEBHOOK=""
