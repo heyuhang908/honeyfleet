@@ -632,6 +632,7 @@ hf_federation_verify_agent() {
     if [ -f "$VERIFY_LOG" ] && [ "$(wc -c <"$VERIFY_LOG" 2>/dev/null || echo 0)" -gt 1048576 ]; then
         sudo truncate -s 0 "$VERIFY_LOG"
     fi
+    # shellcheck disable=SC2024 # the verify log is written by the invoking user; sudo only wraps the push script
     if ! sudo -n "$PUSH_SCRIPT" >>"$VERIFY_LOG" 2>&1; then
         hf_warn "federation verify: e2e push to $host failed (last log line: $(sudo tail -n 1 "$VERIFY_LOG" 2>/dev/null | head -c 200))"
         return 1
