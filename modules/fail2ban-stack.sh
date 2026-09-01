@@ -609,7 +609,7 @@ hf_fail2ban_stack_remove() {
     hf_log "fail2ban-stack: removed (ban database /var/lib/fail2ban kept for forensics)"
 }
 
-if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+if [ "${BASH_SOURCE[0]}" = "$0" ] || [ -n "${1:-}" ]; then
     case "${1:-}" in
         install) hf_fail2ban_stack_install ;;
         verify)  hf_fail2ban_stack_verify ;;

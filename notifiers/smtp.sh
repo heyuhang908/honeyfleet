@@ -28,12 +28,16 @@ hf_notify_smtp() {
 import smtplib, socket, sys
 from email.message import EmailMessage
 relay, to, title, body = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4][:3500]
+# relay may be "host" or "host:port" — split before handing to smtplib
+host, _, port = relay.rpartition(":")
+if not port.isdigit():
+    host, port = relay, "25"
 msg = EmailMessage()
 msg["Subject"] = title
 msg["From"] = f"honeyfleet@{socket.gethostname()}"
 msg["To"] = to
 msg.set_content(body)
-with smtplib.SMTP(relay, timeout=15) as s:   # relay may be "host:port"
+with smtplib.SMTP(host, int(port), timeout=15) as s:
     s.send_message(msg)
 PY
 }

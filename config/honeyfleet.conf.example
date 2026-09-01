@@ -57,4 +57,5 @@ HF_PUSH_INTERVAL=60                      # seconds
 # HF_FW_MINING_PORTS="3333,4444,5555,7777,8048,14444"
 # HF_WATERLINE_COOLDOWN_S=3600
 # HF_DINGTALK_SECRET=""             # dingtalk signing secret (if signing enabled)
+# HF_HP_SSHESAME_SHA256=""          # override pinned sshesame sha256 (custom builds)
 # HF_FLEET_SUMMARY_DEDUPE=1         # 0 = notify on every fleet push (no dedupe)

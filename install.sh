@@ -36,6 +36,8 @@ while [ $# -gt 0 ]; do
 done
 
 [ -n "$CONF_OVERRIDE" ] && CONF=$CONF_OVERRIDE
+# modules dispatch on "remove"; keep the public CLI verb "uninstall"
+[ "$MODE" = "uninstall" ] && MODE=remove
 
 # modules in dependency order
 ALL_MODULES="ssh-hardening firewall-baseline fail2ban-stack honeypot-ssh file-integrity waterline-alerts notifiers federation"

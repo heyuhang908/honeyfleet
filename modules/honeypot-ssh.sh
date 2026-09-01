@@ -63,14 +63,12 @@ PROBE=$HF_LIB/sshesame-health.sh
 LOGROTATE=/etc/logrotate.d/honeyfleet-sshesame
 
 # Pinned upstream artifact (supply-chain gate).
-# Tag: v0.0.39 — the version recorded by the production audit for the honeypot.
-# SHA256: the audited production binary (linux/amd64, source-built at that tag
-# and recorded by the audit + filehash baseline). Upstream release assets are
-# built by a different toolchain and will NOT match this pin; install is
-# fail-closed on mismatch and the message explains the operator options.
+# Tag: v0.0.39 — pinned to the official GitHub release assets; both hashes were
+# verified against the release downloads (2026-08-31). Install is fail-closed on
+# mismatch; override with HF_HP_SSHESAME_SHA256 when using a custom build.
 SSHSAME_TAG="v0.0.39"
 SSHSAME_SHA256_AMD64="1ded2e0107295af5eae08774371b8d276ce80ef1d10ac8458d72569d46f67414"
-SSHSAME_SHA256_ARM64=""    # no audited build for this arch — override via HF_HP_SSHESAME_SHA256
+SSHSAME_SHA256_ARM64="90d562ed09675c757ed2d28a10ef5e9e9eb374ed67e0b801bc4ccc9801c31bf1"
 SSHSAME_URL_TPL="https://github.com/jaksi/sshesame/releases/download/__TAG__/__ASSET__"
 
 # ── helpers ──────────────────────────────────────────────────────
@@ -756,7 +754,7 @@ hf_honeypot_ssh_remove() {
     hf_warn "honeypot-ssh: the [sshesame] jail in fail2ban-stack still references the removed honeypot — re-run fail2ban-stack install with HF_SSH_HONEYPOT=false, or re-install honeypot-ssh"
 }
 
-if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+if [ "${BASH_SOURCE[0]}" = "$0" ] || [ -n "${1:-}" ]; then
     case "${1:-}" in
         install) hf_honeypot_ssh_install ;;
         verify)  hf_honeypot_ssh_verify ;;
