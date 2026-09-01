@@ -1,5 +1,7 @@
 # honeyfleet
 
+[![CI](https://github.com/heyuhang908/honeyfleet/actions/workflows/ci.yml/badge.svg)](https://github.com/heyuhang908/honeyfleet/actions/workflows/ci.yml)
+
 **Honeypot-fronted SSH defense with a three-tier enforcement funnel, fleet-wide self-monitoring, and a consistency gate that keeps the monitoring itself honest — one config, N servers, pluggable alerting.**
 
 honeyfleet turns a stock Ubuntu/Debian server into a hard target: the real sshd moves to a
@@ -7,10 +9,40 @@ randomized high port behind a default-DROP firewall, a fake SSH (the honeypot) i
 and feeds an escalating fail2ban funnel, and every node continuously self-monitors its own
 defenses — pushing status to a central node so that a silenced monitor is itself an alert.
 
+**What it is not:** another detection tool. honeyfleet is a *defense orchestration layer* — it
+wires OS-native components (`sshd`, `iptables`, `fail2ban`, `systemd`) into one config-driven,
+self-verifying system. Three differentiators:
+
+- **Verifiable** — a consistency gate proves the deployed, running state actually matches the
+  config (parameters are read back from the live fail2ban, counters are cross-checked, drift is
+  caught at deploy time, not incident time);
+- **Safe to change** — an anti-lockout ladder means hardening your server cannot lock you out
+  (candidate config validated, a real key-auth login proven on the new port, automatic rollback);
+- **Minimal footprint** — ≈16 MB deployed, ≈70 MB RSS idle, runs on a 512 MB VPS (measured,
+  not estimated — see below).
+
 Defensive tooling only. No proxy, tunneling-for-circumvention, or traffic-obfuscation code is
 included or accepted (see `docs/MODULE-CONTRACT.md` rule 8).
 
 ---
+
+## Measured footprint & VPS fit (real measurements, not estimates)
+
+| Item | Measured |
+|---|---|
+| honeyfleet code (8 modules + lib + verify gates + tooling) | **175.8 KB** |
+| Single-node deployment (code + pinned `sshesame` binary + fail2ban) | **≈ 16 MB** |
+| Idle memory — `fail2ban-server` | RSS **60.5 MB** / PSS **51.5 MB** |
+| Idle memory — `sshesame` honeypot (official Go binary) | RSS **9.9 MB** / PSS **8.5 MB** |
+| **Total idle resident (honeypot + fail2ban)** | **RSS ≈ 70 MB / PSS ≈ 60 MB** |
+
+- **512 MB RAM / 1 vCPU** runs a full single node (Debian 12); **1 GB** is the sweet spot for a
+  central node with several agents. 256 MB is not recommended.
+- Why so light: honeyfleet itself is zero-resident (Bash + systemd timers, nothing stays in
+  memory); the resident costs are the defense components themselves — fail2ban ≈85%,
+  sshesame one Go binary.
+- Measured on Ubuntu 24.04 with the official release binaries (snapshot after stable running).
+  A 30-day sustained curve is produced by the collector pipeline in `bench/`.
 
 ## ⚠️ Read this before you install (anti-lockout)
 
@@ -104,6 +136,27 @@ A security tool that lies about its own state is worse than no tool. honeyfleet'
 
 Rationale, with the three real-world incidents that produced these mechanisms:
 [`docs/design-rationale.md`](docs/design-rationale.md).
+
+## Verified by execution (v1.0.1)
+
+What is *proven*, and how — because "it compiles" is not evidence:
+
+- **CI is green on every commit** — shellcheck / `bash -n` / `py_compile` run on GitHub
+  Actions ([see the badge above](https://github.com/heyuhang908/honeyfleet/actions)).
+- **v1.0.1 fixed 10 real bugs found by actually running the system** in a sandbox, not by
+  reading the code: the installer's module dispatch, the consistency gate's per-module verify,
+  two modules that silently did nothing through the installer, a "honest counter" that counted
+  JSON formatting lines, the notifier path contract, `uninstall`, SMTP `host:port` parsing, and
+  an empty ARM64 binary pin. Full list in the
+  [v1.0.1 release notes](https://github.com/heyuhang908/honeyfleet/releases/tag/v1.0.1).
+- **End-to-end verified in a real Ubuntu sandbox**: dependency-ordered install, per-module
+  install/verify/status/uninstall, "unconfigured ≠ failure" notifiers, `ssh-hardening`'s
+  anti-lockout (a real key-auth login on the new port is *proven* before the switch; on any
+  failure everything rolls back), and `file-integrity` drift detection
+  (tamper → detect → report → restore).
+- The attack/honeypot/ban figures in the usability evidence set (`bench/`) come from **real
+  production forensics** — 70 malicious IPs, threat-level/ASN/capture-method breakdown, and a
+  captured live Mirai worm delivery chain.
 
 ## Threat model in one paragraph
 

@@ -1,5 +1,7 @@
 # honeyfleet（多节点服务器蜜罐防御与联邦监控系统）
 
+[![CI](https://github.com/heyuhang908/honeyfleet/actions/workflows/ci.yml/badge.svg)](https://github.com/heyuhang908/honeyfleet/actions/workflows/ci.yml)
+
 > **本项目仅含防御功能，不包含任何网络代理、隧道与流量混淆类组件，亦不涉及任何网络访问规避用途。** 只做蜜罐、封禁、加固与自监控；任何代理、隧道规避、流量混淆类代码均不在范围内，也不会被接受。
 
 **Honeypot-fronted SSH defense with a three-tier enforcement funnel, fleet-wide self-monitoring, and a consistency gate that keeps the monitoring itself honest — one config, N servers, pluggable alerting.**
@@ -7,7 +9,27 @@
 
 honeyfleet 把一台原装 Ubuntu/Debian 服务器变成硬目标：真实 sshd 迁到随机高位端口，防火墙默认 DROP；22 端口由假 SSH（蜜罐）接手并喂给逐级升级的 fail2ban 漏斗；每个节点持续自监控自身防御，把状态推送到中心节点 —— 监控一旦被"噤声"，噤声本身就是一条告警。
 
+**它不是什么：** 不是又一个"检测工具"。honeyfleet 是**防御编排层** —— 把系统原生组件（`sshd`、`iptables`、`fail2ban`、`systemd`）串成一个配置驱动、可自我验证的体系。三个差异化：
+
+- **可验证** —— 一致性闸门证明"已部署、运行中的状态"真的等于配置声明（参数从运行中的 fail2ban 读回比对、计数器交叉核对、漂移在部署时暴露而非事故时）；
+- **变更安全** —— 防自锁阶梯保证加固服务器不会把你自己锁在门外（候选配置预检、新端口上实测真实密钥登录、任一步失败自动回滚）；
+- **极轻量** —— 部署 ≈16 MB、空闲常驻 ≈70 MB RSS，512 MB VPS 可跑（实测，非估算，见下）。
+
 ---
+
+## 实测资源开销 & VPS 适配（真实测量，非估算）
+
+| 项 | 实测值 |
+|---|---|
+| honeyfleet 全部代码（8 模块 + 公共库 + 校验闸门 + 工具） | **175.8 KB** |
+| 单节点部署（代码 + 钉死版本的 `sshesame` 二进制 + fail2ban） | **≈ 16 MB** |
+| 空闲内存 —— `fail2ban-server` | RSS **60.5 MB** / PSS **51.5 MB** |
+| 空闲内存 —— `sshesame` 蜜罐（官方 Go 二进制） | RSS **9.9 MB** / PSS **8.5 MB** |
+| **空闲常驻总计（蜜罐 + fail2ban）** | **RSS ≈ 70 MB / PSS ≈ 60 MB** |
+
+- **512 MB RAM / 1 vCPU** 即可完整运行单节点（Debian 12）；**1 GB** 是 central 角色 + 多 agent 的甜点配置。256 MB 不推荐。
+- 为什么这么轻：honeyfleet 本体**零驻留**（Bash + systemd 定时器，不运行时不占内存）；常驻开销是防御组件本身 —— fail2ban ≈85%，sshesame 一个 Go 二进制。
+- 测量环境：Ubuntu 24.04 + 官方 release 二进制，进程稳定后快照；30 天持续曲线由 `bench/` 里的采集管道产出。
 
 ## ⚠️ 安装前必读（防自锁）
 
@@ -77,6 +99,15 @@ sudo ./install.sh status
 - **每次 install 结束**，分发器执行全队校验（`verify/consistency-gate.sh`），配置与实际运行之间的漂移在部署时暴露，而不是在事故时。
 
 三个真实事故如何变成上述机制，见 [`docs/design-rationale.md`](docs/design-rationale.md)。
+
+## 用执行证据验证（v1.0.1）
+
+"能编译"不是证据。下面这些是**证明过**的：
+
+- **每个提交 CI 全绿** —— shellcheck / `bash -n` / `py_compile` 在 GitHub Actions 上运行（见顶部徽章）。
+- **v1.0.1 修复了 10 个真实 bug** —— 全部是**在沙箱里真跑系统**发现的，不是读代码猜的：安装器模块分发、一致性闸门逐模块校验、两个经安装器静默无操作的模块、"诚实计数器"实为数 JSON 格式行、通知器路径契约、`uninstall`、SMTP `host:port` 解析、ARM64 二进制 pin 空缺。完整清单见 [v1.0.1 Release Notes](https://github.com/heyuhang908/honeyfleet/releases/tag/v1.0.1)。
+- **真实 Ubuntu 沙箱端到端验证**：依赖排序安装、逐模块 install/verify/status/uninstall、"未配置 ≠ 故障"通知器、`ssh-hardening` 防自锁（切换前**实测**新端口真实密钥登录；任一步失败全部回滚）、`file-integrity` 篡改检测（篡改 → 检出 → 报告 → 恢复）。
+- 可用性证据集（`bench/`）里的攻击/蜜罐/封禁数据来自**真实生产取证** —— 70 个恶意 IP、威胁分级/ASN/捕获途径分布、以及一次实弹 Mirai 蠕虫投递链的完整捕获。
 
 ## 威胁模型摘要
 
