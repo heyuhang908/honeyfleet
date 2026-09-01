@@ -3,7 +3,7 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning: SemVer.
 
-## [Unreleased]
+## [1.0.1] — 2026-08-31
 
 ### Changed
 
@@ -12,6 +12,35 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning: Sem
   and the user manual updated to match.
 - `docs/hardening-guide.md`: anti-lockout rationale reworded to remove a compliance-scan
   trigger word (meaning unchanged).
+
+### Fixed
+
+- **Installer dispatch (P0)** — `install.sh` sourced modules with the wrong positional
+  arguments, so every module hit its usage branch and the installer's main path never
+  ran any module. Modules are now sourced in a subshell with `$1` set to the operation.
+- **Consistency gate dispatch (P0)** — `verify/consistency-gate.sh` sourced registered
+  modules the same way and died on the first module; per-module verify now runs in a
+  subshell with `$1=verify`.
+- **fail2ban-stack / honeypot-ssh silent no-op (P0)** — their direct-execution guards
+  prevented every operation from running when sourced by the installer; the guard now
+  also dispatches when an explicit operation argument is present.
+- **file-integrity baseline never generated** — `hf_fi_rebase` only logged; it now writes
+  the SHA256 baseline file, and the deployed check script's `files_tracked` counts real
+  baseline entries instead of JSON formatting lines (honest counter restored).
+- **file-integrity module name** — `MOD="fi"` made the consistency gate look for a
+  non-existent `modules/fi.sh`; now `MOD="file-integrity"`.
+- **notify.sh path contract** — `notifiers.sh` / `federation.sh` deployed the shim to
+  `$HF_LIB/lib/notify.sh` while consumers (waterline-alerts, consistency gate) expect
+  `$HF_LIB/notify.sh`; deployment now matches the documented contract.
+- **`install.sh uninstall`** — mapped to the modules' `remove` operation (previously a
+  usage error for every module).
+- **smtp notifier `host:port` parsing** — `HF_SMTP_RELAY="host:port"` is now split before
+  being passed to `smtplib` (previously passed as a single hostname).
+- **sshesame arm64 pin** — the arm64 SHA256 was empty; filled with the hash verified
+  against the official v0.0.39 release asset. `HF_HP_SSHESAME_SHA256` override key added
+  to the config example.
+- **CI shellcheck gate** — the first real run failed on informational/stylistic findings;
+  configured with a documented exclusion list and `-x` (only genuine errors/warnings fail).
 
 ## [1.0.0] — 2026-08-30
 
