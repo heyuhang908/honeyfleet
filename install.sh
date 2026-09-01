@@ -66,14 +66,15 @@ load_env() {
 }
 
 run_module() {
-    local mod=$1 op=$2 fn
-    fn="hf_${mod//-/_}_${op}"
+    local mod=$1 op=$2
     [ -f "$HFROOT/modules/$mod.sh" ] || { echo "SKIP $mod (module file missing)"; return 0; }
+    # Source the module in a subshell with $1 = the operation, so the module's
+    # own case dispatch runs exactly once (functions must not be re-invoked).
+    # (2026-08-31: sourcing without setting $1 made every module hit its usage
+    # branch — the installer's main path was broken; fixed here.)
     # shellcheck disable=SC1090,SC1091
-    . "$HFROOT/modules/$mod.sh"
-    "hf_${mod//-/_}_load" 2>/dev/null || true
+    ( set -- "$op"; . "$HFROOT/modules/$mod.sh" )
     hf_log "── module $mod: $op"
-    $fn
 }
 
 expand_modules() {

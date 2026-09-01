@@ -90,9 +90,9 @@ hf_federation_ensure_notifiers() {
     # $HF_LIB/notify.sh — keep this path stable, it is part of the contract.
     printf '%s\n' '#!/usr/bin/env bash' \
         '# honeyfleet notify shim — sources the notifier dispatcher (hf_notify entrypoint)' \
-        ". \"$DEPLOY_NOTIFIER_DIR/dispatch.sh\"" | sudo -n tee "$DEPLOY_LIB_DIR/notify.sh" > /dev/null
-    sudo -n chmod 0644 "$DEPLOY_LIB_DIR/notify.sh"
-    bash -n "$DEPLOY_LIB_DIR/notify.sh" || hf_die "federation: notify.sh shim fails bash -n"
+        ". \"$DEPLOY_NOTIFIER_DIR/dispatch.sh\"" | sudo -n tee "$HF_LIB/notify.sh" > /dev/null
+    sudo -n chmod 0644 "$HF_LIB/notify.sh"
+    bash -n "$HF_LIB/notify.sh" || hf_die "federation: notify.sh shim fails bash -n"
     hf_registry 1 notifiers
     hf_log "federation: notifier library deployed to $DEPLOY_NOTIFIER_DIR (dependency 'notifiers' satisfied)"
 }

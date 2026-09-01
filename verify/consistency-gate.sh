@@ -23,10 +23,10 @@ if [ -f /var/lib/honeyfleet/registry ]; then
             echo "FAIL $mod (module file missing on this checkout)"
             fail=$((fail+1)); failed="$failed $mod"; continue
         fi
+        # Source the module with $1=verify so its own case dispatch runs the
+        # module's verify function exactly once (same contract as install.sh).
         # shellcheck disable=SC1090,SC1091
-        . "$f"
-        fn="hf_${mod//-/_}_verify"
-        if command -v "$fn" >/dev/null 2>&1 && "$fn"; then
+        if ( set -- verify; . "$f" ); then
             pass=$((pass+1))
         else
             fail=$((fail+1)); failed="$failed $mod"

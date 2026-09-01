@@ -5,7 +5,7 @@
 # NO-OP on re-run, config read ONLY via hf_conf, backups via hf_backup.
 
 set -uo pipefail
-MOD="fi"
+MOD="file-integrity"
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=../lib/common.sh
 source "$SCRIPT_DIR/../lib/common.sh"
@@ -57,7 +57,7 @@ if [ ! -f "$baseline_file" ]; then
     printf '{"schema":1,"updated_at":%d,"files_tracked":0,"drift_count":0,"drift_files":[],"last_result":"baseline_missing"}\n' "$now" > "$state_file"
     exit 0
 fi
-tracked=$(grep -cvE '^\s*$' "$baseline_file" 2>/dev/null || echo 0)
+tracked=$(python3 -c "import json;print(len(json.load(open('$baseline_file')).get('files', {})))" 2>/dev/null || echo 0)
 drift=$(python3 - "$baseline_file" "$targets_file" <<'PY'
 import hashlib, json, sys
 base = json.load(open(sys.argv[1]))
@@ -94,7 +94,7 @@ json.dump({
 }, open(sp, "w"), indent=2)
 PY
 CHECK
-    sudo install -o root -g root -m 0755 "$CHECK_SCRIPT" "$CHECK_SCRIPT"
+    sudo chmod 0755 "$CHECK_SCRIPT"
 
     # 3. baseline (first install or explicit rebase)
     if [ ! -f /etc/honeyfleet/file-integrity-baseline.json ]; then
@@ -125,13 +125,28 @@ UNIT
 }
 
 hf_fi_rebase() {
-    # Accept current state of all targets as trusted. Warn on dangling entries.
+    # Accept current state of all targets as trusted. Warn on dangling entries,
+    # then WRITE the baseline (sha256 per existing target) — without this file
+    # the drift check would have nothing to compare against.
     local dangling
     dangling=$(sudo grep -vE '^\s*$' /etc/honeyfleet/file-integrity-targets.conf 2>/dev/null | while read -r t; do
         [ -f "$t" ] || printf '%s\n' "$t"
     done)
     [ -n "$dangling" ] && hf_warn "dangling targets (file missing, excluded from baseline): $dangling"
-    hf_log "file-integrity: baseline rebased"
+    sudo python3 - /etc/honeyfleet/file-integrity-targets.conf /etc/honeyfleet/file-integrity-baseline.json <<'PY'
+import hashlib, json, os, sys
+targets_file, out = sys.argv[1], sys.argv[2]
+files = {}
+for line in open(targets_file, encoding="utf-8"):
+    t = line.strip()
+    if not t or t.startswith("#"):
+        continue
+    if os.path.isfile(t):
+        files[t] = {"sha256": hashlib.sha256(open(t, "rb").read()).hexdigest()}
+json.dump({"schema": 1, "files": files}, open(out, "w"), indent=2)
+PY
+    local n; n=$(python3 -c "import json;print(len(json.load(open('/etc/honeyfleet/file-integrity-baseline.json')).get('files', {})))" 2>/dev/null || echo 0)
+    hf_log "file-integrity: baseline rebased ($n files)"
 }
 
 hf_fi_verify() {
