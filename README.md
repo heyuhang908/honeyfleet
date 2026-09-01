@@ -1,5 +1,7 @@
 # honeyfleet
 
+> **🌏 English** · [**中文（简体）**](README.zh-CN.md)
+
 [![CI](https://github.com/heyuhang908/honeyfleet/actions/workflows/ci.yml/badge.svg)](https://github.com/heyuhang908/honeyfleet/actions/workflows/ci.yml)
 
 **Honeypot-fronted SSH defense with a three-tier enforcement funnel, fleet-wide self-monitoring, and a consistency gate that keeps the monitoring itself honest — one config, N servers, pluggable alerting.**

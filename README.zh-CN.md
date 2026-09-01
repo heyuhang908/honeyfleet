@@ -1,5 +1,7 @@
 # honeyfleet（多节点服务器蜜罐防御与联邦监控系统）
 
+> **🌏 [English](README.md)** · **中文（简体）**
+
 [![CI](https://github.com/heyuhang908/honeyfleet/actions/workflows/ci.yml/badge.svg)](https://github.com/heyuhang908/honeyfleet/actions/workflows/ci.yml)
 
 > **本项目仅含防御功能，不包含任何网络代理、隧道与流量混淆类组件，亦不涉及任何网络访问规避用途。** 只做蜜罐、封禁、加固与自监控；任何代理、隧道规避、流量混淆类代码均不在范围内，也不会被接受。
