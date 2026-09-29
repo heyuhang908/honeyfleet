@@ -25,10 +25,26 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning: Sem
   contract's `hf_file_integrity_*`, left over from the partial 1.0.1 fix that renamed
   `MOD` but not the functions. Nothing checked, so nothing noticed; it is now enforced
   mechanically.
+- **Every script was committed non-executable (100644), which silently disabled
+  the gate.** On a fresh Linux/macOS clone `sudo ./install.sh install` — the
+  entrypoint README.md and the user manual give 16 times — could not run at all,
+  and because install.sh ran the gate behind `if [ -x .../consistency-gate.sh ]`,
+  the `-x` test was false and the gate was skipped without a word. Two independent
+  things had to be true for the gate to run and both were false. All `*.sh` and
+  `tools/gen-copyright-pages.py` are now 100755; the gate is invoked as
+  `bash "$GATE"` behind a `-f` guard so it no longer depends on the executable
+  bit, and a missing gate is fatal rather than a silent pass.
+- **`waterline-alerts` could never take its NO-OP path.**
+  `hf_install_if_changed` wrote the rendered file with `printf '%s\n'` and
+  compared it with `printf '%s'`, so the two differed by exactly one byte, the
+  comparison never matched, and the module re-deployed on every install — its
+  "already consistent — NO-OP" branch was unreachable code. Every sibling compared
+  with the matching form. Found by the `install-verify` CI job on its first real
+  run; `tests/test_module_idempotence.sh` now lints the pattern.
 
 ### Added
 
-- **`tests/` — the suite that was missing.** The verification apparatus behind
+- **`tests/`** — the suite that was missing.** The verification apparatus behind
   "Verifiable" was itself unverified: the directory was empty and excluded from all
   three CI jobs. Five dependency-free suites (no bats, no pytest, nothing to install)
   now cover the config accessor, backup layout and retention, dependency resolution,
@@ -41,7 +57,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning: Sem
   removed. MODULE-CONTRACT rule 2 claimed "verify gates in CI enforce this"; until now
   nothing in CI ran the installer at all.
 - **`unit-tests` CI job**, and `tests/` is no longer excluded from shellcheck,
-  `bash -n` and `py_compile`.
+  `bash -n` and `py_compile` — the suite is now linted as well as executed.
+- **`tests/test_module_idempotence.sh`** — lints the compare/write printf
+  asymmetry described above, naming the offending line.
 
 ### Known
 

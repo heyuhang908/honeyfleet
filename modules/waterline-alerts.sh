@@ -110,7 +110,7 @@ CHECK
 
 hf_install_if_changed() { # $1 rendered content  $2 target path  $3 mode
     local content=$1 target=$2 mode=$3 tmp
-    if [ -f "$target" ] && printf '%s' "$content" | sudo cmp -s - "$target"; then
+    if [ -f "$target" ] && printf '%s\n' "$content" | sudo cmp -s - "$target"; then
         return 1   # unchanged
     fi
     tmp=$(mktemp)
