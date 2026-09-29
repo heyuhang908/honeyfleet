@@ -102,11 +102,12 @@ sudo ./install.sh status
 
 三个真实事故如何变成上述机制，见 [`docs/design-rationale.md`](docs/design-rationale.md)。
 
-## 用执行证据验证（v1.0.1）
+## 用执行证据验证（v1.0.2）
 
 "能编译"不是证据。下面这些是**证明过**的：
 
-- **每个提交 CI 全绿** —— shellcheck / `bash -n` / `py_compile` 在 GitHub Actions 上运行（见顶部徽章）。
+- **"验证"本身也被验证了。** v1.0.2 补上了这个项目一直缺的测试套件 —— `tests/` 此前是个空目录，且被所有 CI job 排除 —— 并新增一个在真实 ubuntu-24.04 runner 上端到端跑安装器的 job。6 个零依赖套件、158 条断言，覆盖配置入口、备份布局与保留策略、依赖解析、闸门背后的注册表解析、模块契约，以及那条让某模块的 NO-OP 分支从 v1.0.0 起就不可达的"比较/写入不对称"。**每条断言都做了反向测试**：把对应缺陷重新引入，它必须失败。这个 job 头三次运行就抓到了三件事：所有脚本被以不可执行位提交、`install.sh` 的 `-x` 守卫因此静默跳过闸门、以及 `waterline-alerts` 永远无法报告 NO-OP。完整清单见 [v1.0.2 Release Notes](https://github.com/heyuhang908/honeyfleet/releases/tag/v1.0.2)。
+- **每个提交 CI 全绿** —— 5 个 job：shellcheck / `bash -n` / `py_compile` 扫描全树（含 `tests/`）、测试套件本身、以及在真实 runner 上的 install → verify → 重装（见顶部徽章）。
 - **v1.0.1 修复了 10 个真实 bug** —— 全部是**在沙箱里真跑系统**发现的，不是读代码猜的：安装器模块分发、一致性闸门逐模块校验、两个经安装器静默无操作的模块、"诚实计数器"实为数 JSON 格式行、通知器路径契约、`uninstall`、SMTP `host:port` 解析、ARM64 二进制 pin 空缺。完整清单见 [v1.0.1 Release Notes](https://github.com/heyuhang908/honeyfleet/releases/tag/v1.0.1)。
 - **真实 Ubuntu 沙箱端到端验证**：依赖排序安装、逐模块 install/verify/status/uninstall、"未配置 ≠ 故障"通知器、`ssh-hardening` 防自锁（切换前**实测**新端口真实密钥登录；任一步失败全部回滚）、`file-integrity` 篡改检测（篡改 → 检出 → 报告 → 恢复）。
 - 攻击/蜜罐/封禁数据来自**真实生产取证** —— 一次窗口内 70 个敌意 IP、威胁分级/捕获途径分布，以及一次实弹 Mirai 蠕虫投递链的完整捕获。**原始取证刻意不放进本仓库**：它包含第三方主机具名与运营者自己的端口，违反契约第 7 条。因此**这些指标无法从克隆复现** —— `bench/` 提供的是采集工具与一份脱敏示例。（上面的资源开销数字可以复现。）

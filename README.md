@@ -141,12 +141,23 @@ A security tool that lies about its own state is worse than no tool. honeyfleet'
 Rationale, with the three real-world incidents that produced these mechanisms:
 [`docs/design-rationale.md`](docs/design-rationale.md).
 
-## Verified by execution (v1.0.1)
+## Verified by execution (v1.0.2)
 
 What is *proven*, and how — because "it compiles" is not evidence:
 
-- **CI is green on every commit** — shellcheck / `bash -n` / `py_compile` run on GitHub
-  Actions ([see the badge above](https://github.com/heyuhang908/honeyfleet/actions)).
+- **The verification is itself verified.** v1.0.2 shipped the test suite this project was
+  missing — `tests/` had been an empty directory excluded from every CI job — plus a CI job that
+  runs the installer end to end on a real ubuntu-24.04 runner. Six dependency-free suites (158
+  assertions) cover the config accessor, backup layout and retention, dependency resolution, the
+  registry parse behind the gate, the module contract, and the compare/write asymmetry that had
+  made one module's NO-OP branch unreachable since v1.0.0. Every assertion is reverse-tested:
+  each is shown to fail when its defect is re-introduced. It earned its keep on the first three
+  runs, finding that every script was committed non-executable, that install.sh's `-x` guard then
+  skipped the gate silently, and that `waterline-alerts` could never report a NO-OP. Full list in
+  the [v1.0.2 release notes](https://github.com/heyuhang908/honeyfleet/releases/tag/v1.0.2).
+- **CI is green on every commit** — five jobs: shellcheck / `bash -n` / `py_compile` over the whole
+  tree (including `tests/`), the suite itself, and an end-to-end install → verify → re-install
+  ([see the badge above](https://github.com/heyuhang908/honeyfleet/actions)).
 - **v1.0.1 fixed 10 real bugs found by actually running the system** in a sandbox, not by
   reading the code: the installer's module dispatch, the consistency gate's per-module verify,
   two modules that silently did nothing through the installer, a "honest counter" that counted
