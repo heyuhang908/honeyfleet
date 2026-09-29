@@ -35,26 +35,6 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=../lib/common.sh
 source "$SCRIPT_DIR/../lib/common.sh"
 
-# lib/common.sh hf_backup has a path mismatch: mkdir creates only dirname($f)
-# while the cp target nests the basename as an extra directory component, so
-# cp fails and backups silently never happen. Re-defined here with ONE
-# consistent layout ($HF_STATE/backups/<path-sans-slash>/.$basename.<UTC>) and
-# the same "keep newest 2" retention — identical to the
-# firewall-baseline/ssh-hardening overrides, plus a sudo fallback for non-root
-# scattered-sudo runs. Drop this override once lib/common.sh is fixed.
-hf_backup() {
-    local f=$1 d b ts
-    [ -f "$f" ] || return 0
-    d=${f#/}; d=${d%/*}; b=${f##*/}; ts=$(date -u +%Y%m%dT%H%M%SZ)
-    mkdir -p "$HF_STATE/backups/$d" 2>/dev/null || sudo mkdir -p "$HF_STATE/backups/$d"
-    cp -a "$f" "$HF_STATE/backups/$d/.$b.$ts" 2>/dev/null || \
-        sudo cp -a "$f" "$HF_STATE/backups/$d/.$b.$ts" || return 1
-    ls -1t "$HF_STATE/backups/$d/.$b".* 2>/dev/null | tail -n +3 | while read -r old; do
-        rm -f "$old" 2>/dev/null || sudo rm -f "$old"
-    done
-    return 0
-}
-
 HP_LOG_DEFAULT=/var/log/honeyfleet/sshesame/sshesame.json
 UNIT_SVC=honeyfleet-sshesame.service
 UNIT_HEALTH=honeyfleet-sshesame-health.service

@@ -18,12 +18,6 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=../lib/common.sh
 source "$SCRIPT_DIR/../lib/common.sh"
 
-# lib/common.sh hf_backup has a path mismatch: mkdir creates only dirname($f)
-# while the cp target nests the basename as an extra directory component, so
-# cp fails and backups silently never happen. Re-defined here with ONE
-# consistent layout ($HF_STATE/backups/<path-sans-slash>/.$basename.<UTC>) and
-# the same "keep newest 2" retention. Drop this override once lib/common.sh is fixed.
-
 MAIN_CFG=/etc/ssh/sshd_config
 DROPIN_DIR=/etc/ssh/sshd_config.d
 DROPIN=$DROPIN_DIR/50-honeyfleet.conf

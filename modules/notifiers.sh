@@ -14,29 +14,35 @@ DEPLOY_LIB_DIR=/usr/local/lib/honeyfleet/lib
 
 hf_notifiers_install() {
     sudo mkdir -p "$DEPLOY_NOTIFIER_DIR" "$DEPLOY_LIB_DIR"
-    local f src dst
+    # Every write goes through the compare-first helpers, so a re-run on a
+    # consistent node writes nothing and says so (MODULE-CONTRACT rule 2).
+    local f src dst changed=0 shim
     for f in dispatch.sh telegram.sh wecom.sh dingtalk.sh smtp.sh; do
         src="$SCRIPT_DIR/../notifiers/$f"; dst="$DEPLOY_NOTIFIER_DIR/$f"
         [ -f "$src" ] || hf_die "notifiers: missing repo file notifiers/$f"
         bash -n "$src" || hf_die "notifiers: $f fails bash -n"
-        hf_backup "$dst"
-        sudo install -o root -g root -m 0644 "$src" "$dst"
+        hf_copy_if_changed "$src" "$dst" 0644 && changed=1
     done
     src="$SCRIPT_DIR/../lib/common.sh"; dst="$DEPLOY_LIB_DIR/common.sh"
     [ -f "$src" ] || hf_die "notifiers: dependency missing: repo lib/common.sh"
     bash -n "$src" || hf_die "notifiers: lib/common.sh fails bash -n"
-    hf_backup "$dst"
-    sudo install -o root -g root -m 0644 "$src" "$dst"
+    hf_copy_if_changed "$src" "$dst" 0644 && changed=1
     # shim: part of the module contract — consumers (waterline-alerts,
     # consistency-gate) call hf_notify via $HF_LIB/notify.sh (path is stable,
     # do not move).
-    printf '%s\n' '#!/usr/bin/env bash' \
+    shim=$(printf '%s\n' '#!/usr/bin/env bash' \
         '# honeyfleet notify shim — sources the notifier dispatcher (hf_notify entrypoint)' \
-        ". \"$DEPLOY_NOTIFIER_DIR/dispatch.sh\"" | sudo -n tee "$HF_LIB/notify.sh" > /dev/null
-    sudo -n chmod 0644 "$HF_LIB/notify.sh"
+        ". \"$DEPLOY_NOTIFIER_DIR/dispatch.sh\"")
+    # hf_install_if_changed appends the trailing newline, so this lands
+    # byte-identical to what the previous `printf ... | tee` wrote.
+    hf_install_if_changed "$shim" "$HF_LIB/notify.sh" 0644 && changed=1
     bash -n "$HF_LIB/notify.sh" || hf_die "notifiers: notify.sh shim fails bash -n"
     hf_registry 1 "$MOD"
-    hf_log "notifiers: deployed to $DEPLOY_NOTIFIER_DIR (+ $HF_LIB/notify.sh shim)"
+    if [ "$changed" -eq 0 ]; then
+        hf_log "notifiers: already consistent — NO-OP (5 channels + common.sh + notify.sh shim)"
+    else
+        hf_log "notifiers: deployed to $DEPLOY_NOTIFIER_DIR (+ $HF_LIB/notify.sh shim)"
+    fi
 }
 
 hf_notifiers_verify() {

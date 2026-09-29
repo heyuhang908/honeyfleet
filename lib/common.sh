@@ -31,21 +31,67 @@ hf_conf_bool() {
 # hf_backup FILE — keep the most recent 2 backups per file (retention policy)
 # NOTE: failures are WARNED (never silent) — a backup that silently doesn't
 # happen is worse than no backup (2026-08-30 review finding).
+#
+# Falls back to sudo for the scattered-sudo call paths: a module may run against
+# root-owned files without being root itself. fail2ban-stack and honeypot-ssh
+# used to carry private copies of this function to get that fallback, under a
+# comment claiming lib's version had a path bug. It did not — the mkdir and the
+# cp target always agreed — so the copies only guaranteed the two layouts could
+# drift. Folded back here 2026-09-29; the layout is unchanged (the doubled slash
+# in $dest_dir collapses in the filesystem, so existing backups are still found).
 hf_backup() {
-    local f=$1 b
+    local f=$1 b dest_dir
     [ -f "$f" ] || return 0
     b=$(basename "$f")
-    local dest_dir="$HF_STATE/backups/$(dirname "$f")"
-    if ! mkdir -p "$dest_dir" 2>/dev/null; then
+    dest_dir="$HF_STATE/backups/$(dirname "$f")"
+    mkdir -p "$dest_dir" 2>/dev/null || sudo mkdir -p "$dest_dir" 2>/dev/null || {
         hf_warn "hf_backup: cannot create $dest_dir (need root?)"
         return 1
-    fi
-    if ! cp -a "$f" "$dest_dir/.$b.$(date -u +%Y%m%dT%H%M%SZ)" 2>/dev/null; then
-        hf_warn "hf_backup: copy failed for $f"
+    }
+    cp -a "$f" "$dest_dir/.$b.$(date -u +%Y%m%dT%H%M%SZ)" 2>/dev/null \
+        || sudo cp -a "$f" "$dest_dir/.$b.$(date -u +%Y%m%dT%H%M%SZ)" 2>/dev/null \
+        || { hf_warn "hf_backup: copy failed for $f"; return 1; }
+    # retention: keep newest 2 per family
+    ls -1t "$dest_dir/.$b".* 2>/dev/null | tail -n +3 | while read -r old; do
+        rm -f "$old" 2>/dev/null || sudo rm -f "$old" 2>/dev/null
+    done
+    return 0
+}
+
+# hf_install_if_changed CONTENT TARGET MODE — deploy TARGET unless it already
+# matches. Returns 0 when written, 1 when it was already identical (the caller's
+# NO-OP path).
+#
+# The comparison and the write live in ONE function on purpose: they must use the
+# same printf form. Compare with a trailing newline and write without one (or the
+# reverse) and the two differ by exactly one byte, the comparison never matches,
+# and the caller's NO-OP branch becomes unreachable code.
+# modules/waterline-alerts.sh had precisely that asymmetry from v1.0.0 to 1.0.2
+# and silently re-deployed on every install.
+hf_install_if_changed() {
+    local content=$1 target=$2 mode=$3 tmp
+    if [ -f "$target" ] && printf '%s
+' "$content" | sudo cmp -s - "$target"; then
         return 1
     fi
-    # retention: keep newest 2 per family
-    ls -1t "$dest_dir/.$b".* 2>/dev/null | tail -n +3 | while read -r old; do rm -f "$old"; done
+    tmp=$(mktemp)
+    printf '%s
+' "$content" > "$tmp"
+    hf_backup "$target"
+    sudo install -o root -g root -m "$mode" "$tmp" "$target"
+    rm -f "$tmp"
+    return 0
+}
+
+# hf_copy_if_changed SRC DST MODE — the same idea for a file that already exists
+# in the repo (module sources, the notifier library).
+hf_copy_if_changed() {
+    local src=$1 dst=$2 mode=$3
+    if [ -f "$dst" ] && sudo cmp -s "$src" "$dst"; then
+        return 1
+    fi
+    hf_backup "$dst"
+    sudo install -o root -g root -m "$mode" "$src" "$dst"
     return 0
 }
 

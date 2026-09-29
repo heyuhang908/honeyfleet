@@ -18,12 +18,6 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=../lib/common.sh
 source "$SCRIPT_DIR/../lib/common.sh"
 
-# lib/common.sh hf_backup has a path mismatch: mkdir creates only dirname($f)
-# while the cp target nests the basename as an extra directory component, so
-# cp fails and backups silently never happen. Re-defined here with ONE
-# consistent layout ($HF_STATE/backups/<path-sans-slash>/.$basename.<UTC>) and
-# the same "keep newest 2" retention. Drop this override once lib/common.sh is fixed.
-
 CHECK_SCRIPT=$HF_LIB/waterline-check.sh
 UNIT_SERVICE=waterline-alerts.service
 UNIT_TIMER=waterline-alerts.timer
@@ -106,19 +100,6 @@ trip() {
     "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$disk_used" "$mem_avail" "$swap_used" >> "$log"
 exit 0
 CHECK
-}
-
-hf_install_if_changed() { # $1 rendered content  $2 target path  $3 mode
-    local content=$1 target=$2 mode=$3 tmp
-    if [ -f "$target" ] && printf '%s\n' "$content" | sudo cmp -s - "$target"; then
-        return 1   # unchanged
-    fi
-    tmp=$(mktemp)
-    printf '%s\n' "$content" > "$tmp"
-    hf_backup "$target"
-    sudo install -o root -g root -m "$mode" "$tmp" "$target"
-    rm -f "$tmp"
-    return 0
 }
 
 hf_waterline_alerts_install() {

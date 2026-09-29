@@ -34,6 +34,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning: Sem
   `tools/gen-copyright-pages.py` are now 100755; the gate is invoked as
   `bash "$GATE"` behind a `-f` guard so it no longer depends on the executable
   bit, and a missing gate is fatal rather than a silent pass.
+- **`hf_backup` had three implementations.** `fail2ban-stack` and `honeypot-ssh`
+  each carried a private copy, and five modules carried a comment claiming the
+  library version had a path bug ("mkdir creates only dirname($f) while the cp
+  target nests the basename as an extra directory component"). The library version
+  never had that bug — the mkdir and the cp target have always named the same
+  directory — so the copies only guaranteed three layouts could drift. The sudo
+  fallback, which was the copies' real (and unstated) purpose, is now in
+  lib/common.sh and the copies are gone.
 - **`waterline-alerts` could never take its NO-OP path.**
   `hf_install_if_changed` wrote the rendered file with `printf '%s\n'` and
   compared it with `printf '%s'`, so the two differed by exactly one byte, the
@@ -58,18 +66,24 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning: Sem
   nothing in CI ran the installer at all.
 - **`unit-tests` CI job**, and `tests/` is no longer excluded from shellcheck,
   `bash -n` and `py_compile` — the suite is now linted as well as executed.
+- **`hf_install_if_changed` / `hf_copy_if_changed`** in lib/common.sh — compare
+  before writing, with the comparison and the write in one function so they cannot
+  disagree. `waterline-alerts` and `notifiers` deploy through them; `notifiers`
+  previously rewrote its five channel scripts, `common.sh` and the shim on every
+  install.
 - **`tests/test_module_idempotence.sh`** — lints the compare/write printf
   asymmetry described above, naming the offending line.
 
 ### Known
 
-- `notifiers` and `federation` re-write unconditionally on re-install — they have
-  no NO-OP path, so rule 2 does not yet hold for them. `waterline-alerts`,
-  `firewall-baseline`, `honeypot-ssh`, `ssh-hardening` and `fail2ban-stack` do detect
-  it, and the new CI job exercises that path on `waterline-alerts`.
-- `lib/common.sh`'s `hf_backup` is still re-implemented in `fail2ban-stack` and
-  `honeypot-ssh`, and five modules carry a comment describing a path bug that is not
-  present in the current library code.
+- `file-integrity` and `federation` still re-deploy their own artifacts on every
+  install. They converge — same bytes, so the deployed fingerprint is unchanged — but
+  they do not skip the work, so rule 2 does not hold for them in the strict sense.
+  `ssh-hardening`, `firewall-baseline`, `fail2ban-stack`, `honeypot-ssh`,
+  `waterline-alerts` and `notifiers` all have real change detection.
+- The measured figures in both READMEs are not yet reproducible from the repository:
+  the harness that produced them is maintained out of tree. See the note under
+  "Measured footprint".
 
 ## [1.0.1] — 2026-08-31
 

@@ -1,0 +1,99 @@
+{
+  "_about": {
+    "what": "Schema and worked example for the honeyfleet bench harness.",
+    "discipline": "Every example value here is either honeyfleet's own measurement or an anonymised aggregate. Per MODULE-CONTRACT rule 7 this repository carries no real IPs, domains, keys or tokens — so attacker addresses, ASN names and host identities that appear in the operator's own evidence are NOT reproduced here.",
+    "sanitisation": "IPs use RFC 5737 documentation ranges (192.0.2.0/24, 198.51.100.0/24); ports are illustrative; the attack figures are the aggregate counts only.",
+    "how_to_use": "Copy to data/telemetry.json and fill the placeholders with your own collector output, then run: python3 bench/charts.py"
+  },
+  "meta": {
+    "generated": "2026-09-29",
+    "source": ["your own collective evidence — kept out of tree, see _about.discipline"],
+    "nodes": ["main (192.0.2.10: real sshd 22222 + honeypot 22)", "agent (198.51.100.20: 22223)"],
+    "note": "Aggregate attack counts come from one forensic window on a single two-node deployment. They are a snapshot, not a 30-day attack rate."
+  },
+  "attack_intel": {
+    "unique_malicious_ips": 70,
+    "threat_level": {"critical": 2, "high": 54, "medium": 11, "low": 3},
+    "country": {"NL": 29, "US": 12, "AD": 6, "CN": 3, "DE": 3, "GB": 3, "TR": 2, "RU": 2, "SG": 2, "other": 8},
+    "asn_clusters": [
+      {"ips": 20, "note": "one hosting/bulletproof ASN, dense /24 scanning"},
+      {"ips": 12, "note": "second cluster, two countries"},
+      {"ips": 8, "note": "datacentre range, honeypot-triggered bans"},
+      {"ips": 3, "note": "compromised cloud VMs turned into bots"}
+    ],
+    "capture_method": {
+      "f2b-sshd (real-port brute force)": 37,
+      "f2b-recidive (long-term repeat)": 10,
+      "f2b-sshesame (honeypot-triggered)": 6,
+      "f2b-dynamic": 6,
+      "web-vulnerability scan": 4,
+      "lastb (login audit)": 3,
+      "honeypot forensic capture": 3,
+      "iptables hard block": 1
+    },
+    "top_single_day_events": [
+      {"events_per_day": 4400, "type": "mining-pool traffic theft (Kryptex/SRBMiner)", "action": "dropped at both nodes"},
+      {"events_per_day": 551, "type": "web vulnerability scan (/.env /.git /wp-json)", "action": "blocked at the web layer"},
+      {"events_per_day": 58, "type": "high-rate SSH brute force", "action": "iptables REJECT"}
+    ],
+    "worm_capture": "One interactive honeypot session delivered a ~100-line multi-stage Mirai/Gafgyt dropper (directory walk -> kill cloud-security processes -> fetch payload -> rewrite wget/curl -> disable firewall, clear logs). It ran entirely inside the honeypot sandbox; the real host was unaffected."
+  },
+  "honeypot_funnel": {
+    "stages": [
+      {"stage": "internet scanners", "count": null, "evidence": "the 70 unique hostile IPs above are overwhelmingly automated"},
+      {"stage": "SSH connect (honeypot:22)", "count": null, "evidence": "sshesame takes continuous fleet-wide scanning"},
+      {"stage": "auth attempts", "count": null, "evidence": "55+ IPs in sustained brute force (dictionaries, weak credentials, automation)"},
+      {"stage": "interactive session", "count": 1, "evidence": "one real login, worm payload delivered"},
+      {"stage": "command execution", "count": 1, "evidence": "~100-line shell script, 5 stages"},
+      {"stage": "high-risk actions", "count": 1, "evidence": "payload download + cloud-protection kill + log wipe, all isolated"}
+    ],
+    "note": "The nulls are deliberate: the harness prints no estimate for a stage it has not measured. Fill them from your own collector run."
+  },
+  "ban_system": {
+    "jails": [
+      {"jail": "sshd", "port": "real", "findtime": "10m", "maxretry": 5, "bantime": "10m", "increment": true, "multipliers": "1 525600", "maxtime": "3650d", "note": "escalating ban on the real port"},
+      {"jail": "sshesame", "port": 22, "findtime": "600s", "maxretry": 3, "bantime": "2592000s", "note": "honeypot feed: 3 strikes / 10 min -> 30 days"},
+      {"jail": "recidive", "findtime": "30d", "maxretry": 2, "bantime": "3650d", "note": "all-ports, repeat offenders"}
+    ],
+    "recidive_members": 54,
+    "note": "54 of 70 IPs re-offended after a ban and escalated into recidive — bans are not the end of the story"
+  },
+  "fleet": {
+    "agents": 2,
+    "online": 2,
+    "topology": "main (central: monitors, real sshd, honeypot) <-- agent (snapshot push)",
+    "snapshot_seq_last": 20403,
+    "filehash_targets": {"main": 43, "old": 22},
+    "filehash_state": "clean",
+    "known_hosts_tripwire": "honeypot host key != real-port host key; a script that lands on 22 fails hard (tripwire armed)"
+  },
+  "resource_snapshot": {
+    "measured": true,
+    "environment": "Ubuntu 24.04 — official release binary / apt package, really installed and run, snapshot once the processes had settled",
+    "deployment_size": {
+      "code_kb": 175.8,
+      "sshesame_bin_mb": 12.5,
+      "fail2ban_mb": 3,
+      "total_mb": 16
+    },
+    "memory": [
+      {"component": "fail2ban-server", "rss_mb": 60.5, "pss_mb": 51.5, "threads": 5},
+      {"component": "sshesame honeypot", "rss_mb": 9.9, "pss_mb": 8.5, "threads": 6},
+      {"component": "systemd timers", "rss_mb": 0, "pss_mb": 0, "threads": 0},
+      {"component": "honeyfleet scripts (one-shot)", "rss_mb": 10, "pss_mb": 10, "threads": 0, "note": "transient, not resident"}
+    ],
+    "total_idle_rss_mb": 70,
+    "total_idle_pss_mb": 60,
+    "vps_fit": [
+      {"ram": "256 MB", "fit": "not recommended", "note": "defence overhead exceeds 25%; swap/OOM risk"},
+      {"ram": "512 MB", "fit": "minimum", "note": "single node, all modules (Debian 12 / 1 vCPU)"},
+      {"ram": "1 GB", "fit": "sweet spot", "note": "central + several agents + a panel"},
+      {"ram": "2 GB+", "fit": "comfortable", "note": "central + many nodes alongside other services"}
+    ],
+    "note": "Snapshot values, not 30-day means or peaks — the sustained curve is what bench/collector.sh is for."
+  },
+  "reliability_resource": {
+    "status": "pending: 30 days of uptime gives bench/collector.sh the real RSS/PSS/CPU/uptime/MTTR series",
+    "placeholder": true
+  }
+}

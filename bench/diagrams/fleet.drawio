@@ -1,0 +1,42 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram id="honeyfleet-fleet-topology" name="Fleet Topology">
+    <mxGraphModel dx="1200" dy="760" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="internet" value="互联网攻击面&#10;扫描器 / 僵尸网络 / 爆破 / 蠕虫" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDF3E7;strokeColor=#C73E1D;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="300" width="220" height="80" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="main" value="主 VPS · 192.0.2.10（central）&#10;真实 sshd 22222 · 蜜罐 22" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EAF2F8;strokeColor=#2E86AB;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="420" y="120" width="280" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="hp" value="蜜罐 sshesame · 22 口&#10;诱捕 + f2b-sshesame 封禁" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDF3E7;strokeColor=#C73E1D;" vertex="1" parent="1">
+          <mxGeometry x="440" y="210" width="240" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="f2b" value="fail2ban 三层：sshd / sshesame / recidive&#10;阶梯递增封禁 · 累犯 10 年长封" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EAF2F8;strokeColor=#2E86AB;" vertex="1" parent="1">
+          <mxGeometry x="440" y="290" width="240" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="fi1" value="file-integrity 43 targets · clean&#10;known_hosts tripwire" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F4F4F4;strokeColor=#7A6C5D;" vertex="1" parent="1">
+          <mxGeometry x="440" y="370" width="240" height="50" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="old" value="旧 VPS · 198.51.100.20（agent）&#10;真实 sshd 22223 · 水位告警 · filehash 22" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EAF9F0;strokeColor=#3B8F68;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="820" y="240" width="250" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#C73E1D;strokeWidth=2;" edge="1" parent="1" source="internet" target="hp"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#C73E1D;strokeWidth=2;" edge="1" parent="1" source="internet" target="old"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#2E86AB;strokeWidth=2;dashed=1;" edge="1" parent="1" source="hp" target="f2b"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#3B8F68;strokeWidth=2;endArrow=block;" edge="1" parent="1" source="old" target="main">
+          <mxGeometry relative="1" as="geometry"/>
+          <mxArray as="points"><mxPoint x="700" y="150"/></mxArray>
+        </mxCell>
+        <mxCell id="pushLabel" value="SSH 快照推送 seq=20403" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontColor=#3B8F68;" vertex="1" parent="1">
+          <mxGeometry x="580" y="80" width="160" height="30" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

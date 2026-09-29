@@ -31,7 +31,7 @@ honeyfleet 把一台原装 Ubuntu/Debian 服务器变成硬目标：真实 sshd 
 
 - **512 MB RAM / 1 vCPU** 即可完整运行单节点（Debian 12）；**1 GB** 是 central 角色 + 多 agent 的甜点配置。256 MB 不推荐。
 - 为什么这么轻：honeyfleet 本体**零驻留**（Bash + systemd 定时器，不运行时不占内存）；常驻开销是防御组件本身 —— fail2ban ≈85%，sshesame 一个 Go 二进制。
-- 测量环境：Ubuntu 24.04 + 官方 release 二进制，进程稳定后快照；30 天持续曲线由 `bench/` 里的采集管道产出。
+- 测量环境：Ubuntu 24.04 + 官方 release 二进制，进程稳定后快照；这些数字**可复现** —— `bench/` 里有产出它们的采集管道（`collector.sh` → `aggregate.py` → `charts.py`）和一份脱敏示例数据。
 
 ## ⚠️ 安装前必读（防自锁）
 
@@ -64,7 +64,7 @@ sudo ./install.sh verify
 sudo ./install.sh status
 ```
 
-安装器只做分发：所有参数来自唯一配置文件；模块幂等（一致系统上重复 install 是 NO-OP）；依赖自动声明、自动排序（`./install.sh plan` 只打印计划不做变更）。
+安装器只做分发：所有参数来自唯一配置文件；依赖自动声明、自动排序（`./install.sh plan` 只打印计划不做变更）；所有写入都是**先比对后写** —— 一致节点上重复 install 不改动任何东西，并明确打印 `NO-OP`。
 
 ## 三级封禁漏斗
 
@@ -109,7 +109,7 @@ sudo ./install.sh status
 - **每个提交 CI 全绿** —— shellcheck / `bash -n` / `py_compile` 在 GitHub Actions 上运行（见顶部徽章）。
 - **v1.0.1 修复了 10 个真实 bug** —— 全部是**在沙箱里真跑系统**发现的，不是读代码猜的：安装器模块分发、一致性闸门逐模块校验、两个经安装器静默无操作的模块、"诚实计数器"实为数 JSON 格式行、通知器路径契约、`uninstall`、SMTP `host:port` 解析、ARM64 二进制 pin 空缺。完整清单见 [v1.0.1 Release Notes](https://github.com/heyuhang908/honeyfleet/releases/tag/v1.0.1)。
 - **真实 Ubuntu 沙箱端到端验证**：依赖排序安装、逐模块 install/verify/status/uninstall、"未配置 ≠ 故障"通知器、`ssh-hardening` 防自锁（切换前**实测**新端口真实密钥登录；任一步失败全部回滚）、`file-integrity` 篡改检测（篡改 → 检出 → 报告 → 恢复）。
-- 可用性证据集（`bench/`）里的攻击/蜜罐/封禁数据来自**真实生产取证** —— 70 个恶意 IP、威胁分级/ASN/捕获途径分布、以及一次实弹 Mirai 蠕虫投递链的完整捕获。
+- 攻击/蜜罐/封禁数据来自**真实生产取证** —— 一次窗口内 70 个敌意 IP、威胁分级/捕获途径分布，以及一次实弹 Mirai 蠕虫投递链的完整捕获。**原始取证刻意不放进本仓库**：它包含第三方主机具名与运营者自己的端口，违反契约第 7 条。因此**这些指标无法从克隆复现** —— `bench/` 提供的是采集工具与一份脱敏示例。（上面的资源开销数字可以复现。）
 
 ## 威胁模型摘要
 

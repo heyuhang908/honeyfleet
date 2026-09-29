@@ -92,6 +92,17 @@ jobs:
       - name: install the notifier library
         run: sudo ./install.sh install --only notifiers
 
+      # only notifiers and waterline-alerts are asserted here: the other modules
+      # either need a real sshd to move (ssh-hardening) or an apt-installed
+      # fail2ban, and a CI job that needs those is a CI job that flakes.
+      - name: re-installing the notifier library must be a NO-OP
+        shell: bash
+        run: |
+          set -o pipefail
+          sudo ./install.sh install --only notifiers | tee /tmp/notifiers-rerun.log
+          grep -q 'NO-OP' /tmp/notifiers-rerun.log || {
+            echo "::error::notifiers re-deployed instead of reporting NO-OP"; exit 1; }
+
       - name: install waterline-alerts (the module that implements a real NO-OP)
         run: sudo ./install.sh install --only waterline-alerts
 

@@ -1,0 +1,23 @@
+flowchart LR
+    subgraph Discovery["单节点发现"]
+        A["VPS-03 蜜罐捕获恶意 IP"]
+    end
+    subgraph Sharing["中央汇聚（未来扩展 v1.1+）"]
+        C["Central · 威胁情报去重 + 置信度"]
+    end
+    subgraph Action["全节点防御"]
+        V1["VPS-01 封禁"]
+        V2["VPS-02 封禁"]
+        V4["VPS-04 封禁"]
+    end
+
+    A -->|快照上报| C
+    C -->|威胁下发| V1
+    C -->|威胁下发| V2
+    C -->|威胁下发| V4
+
+    style A fill:#FDF3E7,stroke:#C73E1D
+    style C fill:#EAF2F8,stroke:#2E86AB
+    style V1 fill:#EAF9F0,stroke:#3B8F68
+    style V2 fill:#EAF9F0,stroke:#3B8F68
+    style V4 fill:#EAF9F0,stroke:#3B8F68

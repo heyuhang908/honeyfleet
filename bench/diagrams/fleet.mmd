@@ -1,0 +1,34 @@
+flowchart LR
+    subgraph Internet["互联网攻击面"]
+        SC["自动化扫描器 / 僵尸网络<br/>爆破 / 蠕虫投放"]
+    end
+
+    subgraph Main["主 VPS · 192.0.2.10 (central)"]
+        HP["蜜罐 sshesame · 22 口<br/>诱捕 + f2b-sshesame"]
+        SSH["真实 sshd · 22222 口<br/>加固 + f2b-sshd 阶梯封禁"]
+        F2B["fail2ban 三层<br/>sshd / sshesame / recidive"]
+        FI1["file-integrity<br/>43 targets · clean"]
+        TRIP["known_hosts tripwire<br/>蜜罐钥匙 ≠ 真口钥匙"]
+    end
+
+    subgraph Old["旧 VPS · 198.51.100.20 (agent)"]
+        SSH2["真实 sshd · 22223 口"]
+        FI2["file-integrity<br/>22 targets · clean"]
+        WL["水位告警 waterline"]
+    end
+
+    SC --> HP
+    SC --> SSH
+    SC --> SSH2
+
+    HP --> F2B
+    SSH --> F2B
+    F2B -->|重复攻击| REC["recidive 10年长封"]
+
+    Old -->|SSH 快照推送 seq=20403| Main
+
+    style HP fill:#FDF3E7,stroke:#C73E1D
+    style F2B fill:#EAF2F8,stroke:#2E86AB
+    style REC fill:#FDE7E7,stroke:#C0392B
+    style Main fill:#F7F9FB,stroke:#2E86AB
+    style Old fill:#F2F9F4,stroke:#3B8F68

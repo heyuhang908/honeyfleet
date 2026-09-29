@@ -3,10 +3,12 @@ __pycache__/
 *.pyc
 *.log
 
-# bench/ holds the measurement evidence behind the README's footprint and
-# usability figures. It is NOT sanitized: diagrams, charts and telemetry carry
-# real node IPs and real sshd/honeypot ports, which MODULE-CONTRACT rule 7
-# forbids ("Real IPs, domains, keys, and tokens are forbidden in this
-# repository"). Ignored so that a `git add -A` cannot publish them; commit a
-# scrubbed copy deliberately, file by file, when that is decided.
-bench/
+# bench/ ships its harness (collector / aggregate / charts + a sanitised example),
+# not the raw production evidence: that carries real node addresses, real ports,
+# and named attribution of third-party hostile hosts, which rule 7 forbids. The
+# unpublished parts are listed individually so `git add -A` cannot reach them.
+# bench/README.md states what is published and why.
+bench/report/
+bench/USABILITY-REPORT.md
+bench/data/telemetry.json
+bench/_unpublished/

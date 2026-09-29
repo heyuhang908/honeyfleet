@@ -44,7 +44,8 @@ included or accepted (see `docs/MODULE-CONTRACT.md` rule 8).
   memory); the resident costs are the defense components themselves — fail2ban ≈85%,
   sshesame one Go binary.
 - Measured on Ubuntu 24.04 with the official release binaries (snapshot after stable running).
-  A 30-day sustained curve is produced by the collector pipeline in `bench/`.
+  These figures are reproducible: `bench/` ships the harness that produced them
+  (`collector.sh` → `aggregate.py` → `charts.py`) plus a sanitised example dataset.
 
 ## ⚠️ Read this before you install (anti-lockout)
 
@@ -88,9 +89,10 @@ sudo ./install.sh verify
 sudo ./install.sh status
 ```
 
-The installer is a dispatcher: every parameter comes from the one config file, modules are
-idempotent (re-running install is a NO-OP on a consistent system), and dependencies are
-declared and resolved automatically (`./install.sh plan` prints the order without changes).
+The installer is a dispatcher: every parameter comes from the one config file, dependencies are
+declared and resolved automatically (`./install.sh plan` prints the order without changes), and
+every write is compare-before-write — re-running install on a consistent node changes nothing
+and says so (`NO-OP`).
 
 ## The three-tier enforcement funnel
 
@@ -156,9 +158,12 @@ What is *proven*, and how — because "it compiles" is not evidence:
   anti-lockout (a real key-auth login on the new port is *proven* before the switch; on any
   failure everything rolls back), and `file-integrity` drift detection
   (tamper → detect → report → restore).
-- The attack/honeypot/ban figures in the usability evidence set (`bench/`) come from **real
-  production forensics** — 70 malicious IPs, threat-level/ASN/capture-method breakdown, and a
-  captured live Mirai worm delivery chain.
+- The attack/honeypot/ban figures come from **real production forensics** — 70 hostile IPs in one
+  window, a threat-level/capture-method breakdown, and a captured live Mirai worm delivery chain.
+  The raw evidence is deliberately **not** in this repository: it names third-party hosts and the
+  operator's own ports, which contract rule 7 forbids. So those particular figures are not
+  reproducible from a clone — `bench/` ships the harness and a sanitised example instead. (The
+  resource figures above are reproducible.)
 
 ## Threat model in one paragraph
 
