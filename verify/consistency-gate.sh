@@ -19,7 +19,7 @@ pass=0; fail=0; failed=""
 # Only `=1` marks mean installed; `=0` marks (written by every module's
 # remove path) are records, not modules.  The parse lives in lib/common.sh so
 # the suite can exercise it without a deployed host: tests/test_registry_parse.sh
-for mod in $(hf_registry_installed_modules); do
+for mod in $(hf_registry_installed_modules /var/lib/honeyfleet/registry); do
     f="$HFROOT/modules/$mod.sh"
     if [ ! -f "$f" ]; then
         echo "FAIL $mod (module file missing on this checkout)"

@@ -123,12 +123,18 @@ done
 # per-module verify functions and skipped every fleet-level cross-check
 # (registry present, notifier library deployed, honeypot listener bound), and
 # exited 0 on a host with no registry at all.
+# The gate is invoked through `bash`, and the guard is -f rather than -x. This
+# repository stored every script as 100644, so a fresh clone got a
+# non-executable consistency-gate.sh and the old `-x` guard silently skipped the
+# gate: a second, quieter instance of "the headline feature does not run",
+# found by the install-verify CI job (2026-09-29). A missing gate is now fatal
+# instead of a silent pass.
 case "$MODE" in
     install|verify)
-        if [ -x "$HFROOT/verify/consistency-gate.sh" ]; then
-            hf_log "── fleet verify (all modules)"
-            "$HFROOT/verify/consistency-gate.sh" || { hf_warn "verify gate FAILED — see output above"; exit 1; }
-        fi
+        GATE="$HFROOT/verify/consistency-gate.sh"
+        [ -f "$GATE" ] || hf_die "consistency gate missing: $GATE (cannot verify)"
+        hf_log "── fleet verify (all modules)"
+        bash "$GATE" || { hf_warn "verify gate FAILED — see output above"; exit 1; }
         ;;
 esac
 hf_log "done: mode=$MODE role=$HFROLE modules=$(expand_modules "$ONLY")"
