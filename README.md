@@ -132,7 +132,7 @@ A security tool that lies about its own state is worse than no tool. honeyfleet'
 - **Every parameter consumer is enumerated.** If two components validate the same value, a
   change must update both in the same commit — enforced by contract rule 4 and by cross-module
   gates (e.g. the honeypot gate re-checks the fail2ban jail port).
-- **After every install**, the dispatcher runs the fleet-wide verify pass
+- **`install.sh verify` — and every install — runs the fleet-wide verify pass
   (`verify/consistency-gate.sh`), so drift between what you configured and what actually runs
   is caught at deploy time, not at incident time.
 

@@ -3,6 +3,56 @@
 All notable changes to this project are documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning: SemVer.
 
+## [1.0.2] — 2026-09-29
+
+### Fixed
+
+- **`install.sh verify` never ran the consistency gate.** The gate was gated on
+  `MODE = install`, so the command `usage()`, both READMEs and the user manual tell
+  operators to run executed only the per-module verify functions. Every fleet-level
+  cross-check (registry present, notifier library deployed, honeypot listener bound)
+  was skipped, and the command exited 0 on a host with no registry at all. The gate
+  is the project's headline feature; both paths now run it.
+- **The consistency gate failed after any uninstall.** Every module's `remove` path
+  writes `hf_registry 0 "$MOD"`, and the gate's registry parse stripped only
+  `_installed=1`, so a `=0` record was read as a literal module name and the gate
+  reported `FAIL fail2ban-stack-installed=0 (module file missing on this checkout)`.
+  The failure was bogus and never self-healed: reinstalling a *different* module does
+  not clear the stale line. The parse now matches `=1` anchored, lives in
+  `lib/common.sh` as `hf_registry_installed_modules`, and replaces a four-stage
+  pipeline with one `sed`.
+- **`file-integrity` exported foreign-prefixed functions.** `hf_fi_*` rather than the
+  contract's `hf_file_integrity_*`, left over from the partial 1.0.1 fix that renamed
+  `MOD` but not the functions. Nothing checked, so nothing noticed; it is now enforced
+  mechanically.
+
+### Added
+
+- **`tests/` — the suite that was missing.** The verification apparatus behind
+  "Verifiable" was itself unverified: the directory was empty and excluded from all
+  three CI jobs. Five dependency-free suites (no bats, no pytest, nothing to install)
+  now cover the config accessor, backup layout and retention, dependency resolution,
+  the registry parse behind the gate, and the module contract. All five have been
+  reverse-tested: each assertion is shown to fail when its defect is re-introduced,
+  including the pre-fix registry pipeline failing with the exact historical output.
+- **`install-verify` CI job** — runs the installer on the runner: install
+  notifiers + waterline-alerts, re-install and assert the deployed state is unchanged,
+  assert `install.sh verify` runs the gate, and assert it FAILS when the registry is
+  removed. MODULE-CONTRACT rule 2 claimed "verify gates in CI enforce this"; until now
+  nothing in CI ran the installer at all.
+- **`unit-tests` CI job**, and `tests/` is no longer excluded from shellcheck,
+  `bash -n` and `py_compile`.
+
+### Known
+
+- `notifiers` and `federation` re-write unconditionally on re-install — they have
+  no NO-OP path, so rule 2 does not yet hold for them. `waterline-alerts`,
+  `firewall-baseline`, `honeypot-ssh`, `ssh-hardening` and `fail2ban-stack` do detect
+  it, and the new CI job exercises that path on `waterline-alerts`.
+- `lib/common.sh`'s `hf_backup` is still re-implemented in `fail2ban-stack` and
+  `honeypot-ssh`, and five modules carry a comment describing a path bug that is not
+  present in the current library code.
+
 ## [1.0.1] — 2026-08-31
 
 ### Changed

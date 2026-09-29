@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # honeyfleet module: file-integrity — self-monitoring of security-critical files.
 # Exemplar module: every other module MUST follow this contract
-# (see docs/MODULE-CONTRACT.md): hf_fi_install|verify|status|remove, idempotent,
+# (see docs/MODULE-CONTRACT.md): hf_file_integrity_install|verify|status|remove, idempotent,
 # NO-OP on re-run, config read ONLY via hf_conf, backups via hf_backup.
 
 set -uo pipefail
@@ -30,7 +30,7 @@ targets_list() {
     done
 }
 
-hf_fi_install() {
+hf_file_integrity_install() {
     hf_requires ssh-hardening   # files to protect must exist; ordering declared
 
     sudo mkdir -p "$HF_LIB" "$HF_ETC" "$HF_STATE" /var/log/honeyfleet
@@ -98,7 +98,7 @@ CHECK
 
     # 3. baseline (first install or explicit rebase)
     if [ ! -f /etc/honeyfleet/file-integrity-baseline.json ]; then
-        hf_fi_rebase
+        hf_file_integrity_rebase
     fi
 
     # 4. systemd units
@@ -124,7 +124,7 @@ UNIT
     hf_log "file-integrity: installed ($n targets, baseline $([ -f /etc/honeyfleet/file-integrity-baseline.json ] && echo present || echo MISSING))"
 }
 
-hf_fi_rebase() {
+hf_file_integrity_rebase() {
     # Accept current state of all targets as trusted. Warn on dangling entries,
     # then WRITE the baseline (sha256 per existing target) — without this file
     # the drift check would have nothing to compare against.
@@ -149,7 +149,7 @@ PY
     hf_log "file-integrity: baseline rebased ($n files)"
 }
 
-hf_fi_verify() {
+hf_file_integrity_verify() {
     # Consistency gate: state must be clean AND the tracked caliber must be honest
     # (state files_tracked == actual baseline keys == live target files).
     local rc=0
@@ -170,7 +170,7 @@ PY
     return $rc
 }
 
-hf_fi_status() {
+hf_file_integrity_status() {
     local s; s=$(sudo cat /var/lib/honeyfleet/file-integrity-state.json 2>/dev/null || echo '{}')
     printf 'file-integrity: tracked=%s result=%s drift_files=%s\n' \
         "$(python3 -c "import json,sys;print(json.loads(sys.argv[1]).get('files_tracked'))" "$s" 2>/dev/null || echo '?')" \
@@ -178,7 +178,7 @@ hf_fi_status() {
         "$(python3 -c "import json,sys;print(json.loads(sys.argv[1]).get('drift_files'))" "$s" 2>/dev/null || echo '?')"
 }
 
-hf_fi_remove() {
+hf_file_integrity_remove() {
     hf_backup "$UNIT_SERVICE" 2>/dev/null
     sudo systemctl disable --now "$UNIT_TIMER" 2>/dev/null || true
     sudo rm -f "/etc/systemd/system/$UNIT_SERVICE" "/etc/systemd/system/$UNIT_TIMER" "$CHECK_SCRIPT"
@@ -188,10 +188,10 @@ hf_fi_remove() {
 }
 
 case "${1:-}" in
-    install) hf_fi_install ;;
-    verify)  hf_fi_verify ;;
-    status)  hf_fi_status ;;
-    rebase)  hf_fi_rebase ;;
-    remove)  hf_fi_remove ;;
+    install) hf_file_integrity_install ;;
+    verify)  hf_file_integrity_verify ;;
+    status)  hf_file_integrity_status ;;
+    rebase)  hf_file_integrity_rebase ;;
+    remove)  hf_file_integrity_remove ;;
     *) hf_die "usage: file-integrity.sh install|verify|status|rebase|remove" ;;
 esac

@@ -9,7 +9,7 @@
 #     central receiver (/usr/local/lib/honeyfleet/receive-fleet.py) validates
 #     and stores it. Snapshot contents reuse module state (honest counters):
 #       * fail2ban per-jail counters — queried live from fail2ban-client
-#       * file-integrity state — the state JSON behind hf_fi_status
+#       * file-integrity state — the state JSON behind hf_file_integrity_status
 #       * waterline — disk/mem/swap %, thresholds via hf_conf (computed inline
 #         until the waterline-alerts module exposes its own state file)
 #       * hostname + timestamp
@@ -178,7 +178,7 @@ try:
 except Exception:
     pass
 
-# file-integrity state: the same JSON that hf_fi_status reads
+# file-integrity state: the same JSON that hf_file_integrity_status reads
 try:
     with open("/var/lib/honeyfleet/file-integrity-state.json") as fh:
         s = json.load(fh)

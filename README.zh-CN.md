@@ -98,7 +98,7 @@ sudo ./install.sh status
 - **每个模块自带 verify 闸门。** `install.sh verify` 从配置重新推导期望状态，并与**已部署、运行中**的实际状态比对：fail2ban 参数用 `fail2ban-client get` 读回、告警阈值与渲染进脚本里的值比对、完整性计数与基线本身交叉核对。
 - **计数必须诚实。** "监控 N 项"就是 N 个受保护对象，不是 N 行配置。
 - **同一参数的所有消费方必须同改。** 若两个组件校验同一个值，变更必须同一提交内两处都改 —— 契约第 4 条强制执行，跨模块闸门兜底（如蜜罐闸门复核 fail2ban jail 端口）。
-- **每次 install 结束**，分发器执行全队校验（`verify/consistency-gate.sh`），配置与实际运行之间的漂移在部署时暴露，而不是在事故时。
+- **`install.sh verify`（以及每次 install 结束）**，分发器执行全队校验（`verify/consistency-gate.sh`），配置与实际运行之间的漂移在部署时暴露，而不是在事故时。
 
 三个真实事故如何变成上述机制，见 [`docs/design-rationale.md`](docs/design-rationale.md)。
 

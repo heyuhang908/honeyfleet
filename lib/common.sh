@@ -76,3 +76,19 @@ hf_registry() {
     mv /var/lib/honeyfleet/registry.tmp /var/lib/honeyfleet/registry
     printf 'hf_mod_%s_installed=%s\n' "$mod" "$mark" >> /var/lib/honeyfleet/registry
 }
+
+# hf_registry_installed_modules [FILE] -- module names whose mark is exactly 1.
+#
+# The mark is NOT a flag you may ignore when it is 0: every module's remove
+# path writes `hf_registry 0 "$MOD"`, so the file stays behind as a record of
+# what was once installed.  A reader that strips only `_installed=1` then sees
+# a `=0` line as a literal module name -- "fail2ban-stack-installed=0" -- and
+# the consistency gate fails with "module file missing on this checkout" after
+# any uninstall.  The failure is bogus and never self-heals: reinstalling a
+# DIFFERENT module does not clear the stale line.  Match `=1` anchored, then
+# print the captured name only.
+hf_registry_installed_modules() {
+    local file=${1:-/var/lib/honeyfleet/registry}
+    [ -f "$file" ] || return 0
+    sed -n 's/^hf_mod_\(.*\)_installed=1$/\1/p' "$file" | tr '_' '-'
+}

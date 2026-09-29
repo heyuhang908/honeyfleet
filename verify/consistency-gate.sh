@@ -16,23 +16,24 @@ CONF=/etc/honeyfleet/honeyfleet.conf
 pass=0; fail=0; failed=""
 
 # ── per-module verify (only modules the registry marks installed) ────────────
-if [ -f /var/lib/honeyfleet/registry ]; then
-    for mod in $(sed -E 's/^hf_mod_(.+)_installed=1$/\1/' /var/lib/honeyfleet/registry | grep 'hf_mod_\|^[a-z-]*$' | sed -E 's/^hf_mod_//; s/_installed=1$//' | tr '_' '-'); do
-        f="$HFROOT/modules/$mod.sh"
-        if [ ! -f "$f" ]; then
-            echo "FAIL $mod (module file missing on this checkout)"
-            fail=$((fail+1)); failed="$failed $mod"; continue
-        fi
-        # Source the module with $1=verify so its own case dispatch runs the
-        # module's verify function exactly once (same contract as install.sh).
-        # shellcheck disable=SC1090,SC1091
-        if ( set -- verify; . "$f" ); then
-            pass=$((pass+1))
-        else
-            fail=$((fail+1)); failed="$failed $mod"
-        fi
-    done
-fi
+# Only `=1` marks mean installed; `=0` marks (written by every module's
+# remove path) are records, not modules.  The parse lives in lib/common.sh so
+# the suite can exercise it without a deployed host: tests/test_registry_parse.sh
+for mod in $(hf_registry_installed_modules); do
+    f="$HFROOT/modules/$mod.sh"
+    if [ ! -f "$f" ]; then
+        echo "FAIL $mod (module file missing on this checkout)"
+        fail=$((fail+1)); failed="$failed $mod"; continue
+    fi
+    # Source the module with $1=verify so its own case dispatch runs the
+    # module's verify function exactly once (same contract as install.sh).
+    # shellcheck disable=SC1090,SC1091
+    if ( set -- verify; . "$f" ); then
+        pass=$((pass+1))
+    else
+        fail=$((fail+1)); failed="$failed $mod"
+    fi
+done
 
 # ── fleet-level cross-checks (consumer enumeration, see design-rationale) ────
 gate_fail() { echo "FAIL $1"; fail=$((fail+1)); failed="$failed $1"; }

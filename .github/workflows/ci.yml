@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   shellcheck:
-    name: shellcheck (all .sh, tests/ excluded)
+    name: shellcheck (all .sh)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,16 +18,20 @@ jobs:
           # -x follows sources resolvable at CI time; the exclusion list documents
           # deliberate idioms and cross-module patterns (see docs/MODULE-CONTRACT.md):
           #   SC1091 dynamic sources not present at CI time; SC2034 config vars consumed
-          #   by other modules after sourcing; SC2015 deliberate `A && B || C` idiom;
+          #   by other modules after sourcing (and HF_* read through hf_conf's nameref);
+          #   SC2015 deliberate `A && B || C` idiom;
           #   SC2012/SC2010/SC2155/SC2086 stylistic; SC2317 functions invoked
           #   indirectly by sibling modules; SC2094 intentional same-log appends.
+          #
+          # tests/ is linted along with everything else: before 2026-09-29 it was
+          # excluded by every job while being an empty directory, which meant the
+          # suite could not have existed without also being unchecked.
           find . -type f -name '*.sh' \
-            -not -path './tests/*' \
             -not -path './.git/*' \
             -print0 | xargs -0 -r shellcheck -x -e SC1091,SC2034,SC2015,SC2012,SC2010,SC2155,SC2086,SC2317,SC2094
 
   bash-syntax:
-    name: bash -n (all .sh, tests/ excluded)
+    name: bash -n (all .sh)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,13 +42,12 @@ jobs:
             echo "bash -n $f"
             bash -n "$f" || status=1
           done < <(find . -type f -name '*.sh' \
-                     -not -path './tests/*' \
                      -not -path './.git/*' \
                      -print0)
           exit "$status"
 
   python-syntax:
-    name: py_compile (all .py, tests/ excluded)
+    name: py_compile (all .py)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -55,8 +58,86 @@ jobs:
             echo "py_compile $f"
             python3 -m py_compile "$f" || status=1
           done < <(find . -type f -name '*.py' \
-                     -not -path './tests/*' \
                      -not -path './.git/*' \
                      -not -path '*/__pycache__/*' \
                      -print0)
           exit "$status"
+
+  unit-tests:
+    name: unit tests (tests/run-tests.sh)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run the suite
+        run: bash tests/run-tests.sh
+
+  # docs/MODULE-CONTRACT.md rule 2 claims "verify gates in CI enforce" the
+  # idempotence rule. Until this job existed, nothing in CI ran the installer at
+  # all, and the 1.0.1 release notes record four P0 bugs (installer dispatch,
+  # gate dispatch, two silent no-op modules) that a real install would have
+  # caught. This job is that install.
+  install-verify:
+    name: install -> verify -> re-install (real host)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy the example config
+        run: |
+          sudo mkdir -p /etc/honeyfleet
+          sudo cp config/honeyfleet.conf.example /etc/honeyfleet/honeyfleet.conf
+
+      # notifiers first: waterline-alerts and federation call hf_notify, and
+      # declare it via hf_requires.
+      - name: install the notifier library
+        run: sudo ./install.sh install --only notifiers
+
+      - name: install waterline-alerts (the module that implements a real NO-OP)
+        run: sudo ./install.sh install --only waterline-alerts
+
+      - name: re-install must converge without changing deployed state
+        shell: bash
+        run: |
+          set -o pipefail
+          fingerprint() {
+            sudo find /usr/local/lib/honeyfleet -type f -exec sha256sum {} + | sort
+            sudo cat /var/lib/honeyfleet/registry | sort
+          }
+          before=$(fingerprint)
+          sudo ./install.sh install --only waterline-alerts | tee /tmp/reinstall.log
+          after=$(fingerprint)
+          if [ "$before" != "$after" ]; then
+            echo "::error::re-install changed deployed state (rule 2 is not a NO-OP)"
+            diff <(printf '%s\n' "$before") <(printf '%s\n' "$after") || true
+            exit 1
+          fi
+          grep -q 'NO-OP' /tmp/reinstall.log || {
+            echo "::error::waterline-alerts did not report its NO-OP path"; exit 1; }
+
+      # Regression guard for the 2026-09-29 fix: `MODE=verify` used to run only
+      # the per-module verify functions and skip verify/consistency-gate.sh
+      # entirely -- the gate is the project's headline feature, and `install.sh
+      # verify` is what the READMEs and the user manual tell operators to run.
+      - name: install.sh verify must actually run the consistency gate
+        shell: bash
+        run: |
+          set -o pipefail
+          sudo ./install.sh verify | tee /tmp/verify.log
+          grep -q 'consistency-gate: PASS=' /tmp/verify.log || {
+            echo "::error::install.sh verify did not run verify/consistency-gate.sh"; exit 1; }
+          grep -q 'fleet verify' /tmp/verify.log || {
+            echo "::error::the fleet-level cross-checks were skipped"; exit 1; }
+
+      # And it must FAIL when the fleet state is genuinely inconsistent, rather
+      # than reporting a cheerful PASS because it verified nothing.
+      - name: verify must fail when the registry is missing
+        shell: bash
+        run: |
+          sudo mv /var/lib/honeyfleet/registry /var/lib/honeyfleet/registry.hidden
+          if sudo ./install.sh verify; then
+            echo "::error::install.sh verify passed with no registry -- it verified nothing"
+            sudo mv /var/lib/honeyfleet/registry.hidden /var/lib/honeyfleet/registry
+            exit 1
+          fi
+          sudo mv /var/lib/honeyfleet/registry.hidden /var/lib/honeyfleet/registry
+          echo "correctly failed without a registry"

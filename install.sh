@@ -116,8 +116,19 @@ for m in $(expand_modules "$ONLY"); do
     run_module "$m" "$MODE"
 done
 
-if [ "$MODE" = "install" ] && [ -x "$HFROOT/verify/consistency-gate.sh" ]; then
-    hf_log "── fleet verify (all modules)"
-    "$HFROOT/verify/consistency-gate.sh" || { hf_warn "verify gate FAILED — see output above"; exit 1; }
-fi
+# The consistency gate is this project's core differentiator, so BOTH the
+# install path and an explicit `verify` run must execute it.  Before 2026-09-29
+# this was gated on `MODE = install` alone, so `install.sh verify` -- the command
+# usage(), both READMEs and the user manual tell operators to run -- executed the
+# per-module verify functions and skipped every fleet-level cross-check
+# (registry present, notifier library deployed, honeypot listener bound), and
+# exited 0 on a host with no registry at all.
+case "$MODE" in
+    install|verify)
+        if [ -x "$HFROOT/verify/consistency-gate.sh" ]; then
+            hf_log "── fleet verify (all modules)"
+            "$HFROOT/verify/consistency-gate.sh" || { hf_warn "verify gate FAILED — see output above"; exit 1; }
+        fi
+        ;;
+esac
 hf_log "done: mode=$MODE role=$HFROLE modules=$(expand_modules "$ONLY")"

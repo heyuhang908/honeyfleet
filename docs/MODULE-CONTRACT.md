@@ -8,8 +8,11 @@ plus an optional `hf_<mod>_load` (per-run setup).
 
 1. **Single config source.** Read parameters ONLY through `hf_conf KEY [default]`
    / `hf_conf_bool KEY`. Never hardcode a port, path, threshold, or IP.
-2. **Idempotent.** `install` re-run on an installed system must be a NO-OP
-   (verify gates in CI enforce this). Any file you write → `hf_backup` first.
+2. **Idempotent.** `install` re-run on an installed system must be a NO-OP.
+   The naming half is enforced mechanically (see "What CI enforces" below) and the
+   `install-verify` CI job exercises one real NO-OP path, but per-module NO-OP
+   detection is still incomplete — `notifiers` and `federation` re-write
+   unconditionally. Any file you write → `hf_backup` first.
 3. **Verify gate.** `verify` must fail (non-zero) when the deployed state does
    not match the config, and must print one PASS/FAIL line. A verify that only
    checks "the file exists" is not a verify — check behavior AND parameters.
@@ -41,3 +44,27 @@ hf_<mod>_verify    # exit 0 = consistent; prints PASS/FAIL line
 hf_<mod>_status    # one human-readable line, no side effects
 hf_<mod>_remove    # clean removal; keep state files for forensics
 ```
+
+Additional operations are allowed (e.g. `file-integrity`'s `rebase`,
+`ssh-hardening`'s `confirm`) provided they follow the same `hf_<mod>_` prefix and
+are routed from the module's own `case "${1:-}"` dispatcher.
+
+## What CI enforces
+
+Prose rules are worth only what the checks behind them are worth — and rule 2
+previously claimed "verify gates in CI enforce this" while CI ran no installer at
+all. Keep this table true whenever `.github/workflows/ci.yml` changes.
+
+| Rule | Enforced by | Not covered |
+| --- | --- | --- |
+| 1 single config source | `tests/test_hf_conf.sh` — the accessor behaves correctly | a module reading `$HF_*` directly instead of via `hf_conf` |
+| 2 idempotent | `test_module_contract.sh` (naming); `install-verify` job (one real NO-OP path) | `notifiers` and `federation` have no NO-OP path at all |
+| 3 verify gate | `test_module_contract.sh` asserts each module defines and dispatches `verify`; the `install-verify` job runs the gate and requires it to fail on a missing registry | the *content* of each gate (it must check behaviour, not existence) — reviewed by hand |
+| 4 consumer enumeration | not checked | the f2b 2026-08-29 incident class |
+| 5 honest counters | not checked directly | each module's own verify gate is expected to cross-check |
+| 6 dependencies declared | `tests/test_expand_modules.sh` asserts the ordering the declared edges produce | a missing `hf_requires` call in a module |
+| 7 sanitization | not checked | `bench/` (untracked) is not yet sanitized |
+| 8 no circumvention | reviewed by hand | — |
+| 9 self-heal ordering | not checked | — |
+| 10 backups | `tests/test_hf_backup.sh` asserts the layout *and* "keep the newest 2" together | — |
+| naming / dispatch | `tests/test_module_contract.sh` (function prefixes, `MOD`, dispatcher arms) | — |

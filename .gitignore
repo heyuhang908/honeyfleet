@@ -2,3 +2,11 @@ dist/
 __pycache__/
 *.pyc
 *.log
+
+# bench/ holds the measurement evidence behind the README's footprint and
+# usability figures. It is NOT sanitized: diagrams, charts and telemetry carry
+# real node IPs and real sshd/honeypot ports, which MODULE-CONTRACT rule 7
+# forbids ("Real IPs, domains, keys, and tokens are forbidden in this
+# repository"). Ignored so that a `git add -A` cannot publish them; commit a
+# scrubbed copy deliberately, file by file, when that is decided.
+bench/
